@@ -149,6 +149,9 @@ class DynaAgent(Environment):
         ns = self.action_count[s,:]
         adapted_qs = qs + self.epsilon*np.sqrt(ns)
 
+        #if there is multiple adapted qs with same value, make a random choice 
+        # between them. Im using noise to make the values different
+        # the noise doesnt change the q values itself 
         if np.unique(adapted_qs).shape[0] < 4:
             adapted_qs += np.random.randn(4) * 0.000001
 
@@ -543,8 +546,6 @@ class TwoStepAgent(Environment_TwoStepAgent):
         self._init_transition_matrix()
         self._init_reward()
 
-        s1 = self.start_state
-
         for _ in range(num_trials):
             s1 = self.start_state
             # choose action
@@ -561,7 +562,7 @@ class TwoStepAgent(Environment_TwoStepAgent):
             r2 = self.get_reward(new_s,a2)
             # learning
             self._update_q_td(s1, a1, r1, new_s,a2)
-            self._update_q_td(new_s, a2, r2, final_s,a2)
+            self._update_q_td(new_s, a2, r2, final_s,_)
             self._update_q_mb(s1,a1)
             self._update_q_mb(new_s,a2)
             self._update_q_net(s1,a1)

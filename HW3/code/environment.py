@@ -125,13 +125,5 @@ class Environment_TwoStepAgent:
         self.num_states = 3
 
         self.start_state = 0
-        self._generate_env_model()
 
         return None
-
-    def _generate_env_model(self):
-
-        '''
-        Generate transition and reward models
-        '''
-
