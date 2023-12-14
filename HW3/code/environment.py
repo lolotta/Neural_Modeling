@@ -124,8 +124,6 @@ class Environment_TwoStepAgent:
         self.num_actions = 2
         self.num_states = 3
 
-        self.rewards = [0,0,0,0,1,-1,2,-2,0,0,0,0]
-        self.transitions = [0.7,0.3,0.7,0.3,1,1,1,1,1,1,1,1]
         self.start_state = 0
         self._generate_env_model()
 
@@ -137,44 +135,3 @@ class Environment_TwoStepAgent:
         Generate transition and reward models
         '''
 
-        self.T = self.transitions
-        self.R = self.rewards
-
-        return None
-
-    def _get_new_state(self, s, a):
-        '''
-        Returns next state and reward
-        params:
-            s: state
-            a: action 
-        '''
-
-        # s_as = np.arange(7)[(s * self.num_actions +2*a):(s * self.num_actions + 2*a+ 2)]
-
-
-        # if s == 0:
-        #     s_new = np.random.choice((1,2), p=self.transitions[s_as]) 
-
-
-        # return r
-        return None #s_new
-    
-    def _convert_state_to_coords(self, s):
-        '''
-        Convert state to coordinates to index the maze
-        params:
-            s: state
-        '''
-
-        return s//self.num_x_states, s%self.num_x_states
-    
-    def _convert_coords_to_state(self, i, j):
-        '''
-        Convert coordinates to state
-        params:
-            i: y coordinate
-            j: x coordinate
-        '''
-
-        return np.arange(self.num_y_states*self.num_x_states).reshape(self.num_y_states, self.num_x_states)[i][j]
