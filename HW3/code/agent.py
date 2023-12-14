@@ -148,8 +148,21 @@ class DynaAgent(Environment):
         '''
         qs = self.Q[s,:]
         ns = self.action_count[s,:]
-        adapted_qs = qs + 0.001*np.sqrt(ns)
+        adapted_qs = qs + self.epsilon*np.sqrt(ns)
+        #print(adapted_qs)
+        #print(np.unique(adapted_qs).shape[0])
+        if np.unique(adapted_qs).shape[0] < 4:
+            # print(adapted_qs)
+            adapted_qs += np.random.randn(4) * 0.000001
+            # print(adapted_qs)
+
+        
         a = np.argmax(np.asarray(adapted_qs))
+
+        # if not isinstance(a, int):
+        # print(a)
+            
+
 
         # a = np.argmax(self.Q[s,:])
         

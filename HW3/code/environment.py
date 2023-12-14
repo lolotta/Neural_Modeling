@@ -124,9 +124,9 @@ class Environment_TwoStepAgent:
         self.num_actions = 2
         self.num_states = 3
 
-        self.rewards = p["reward_at_goal"]
-        self.blocked_states = p["blocked_states"]
-        self.start_state = p["start_state"]
+        self.rewards = [0,0,0,0,1,-1,2,-2,0,0,0,0]
+        self.transitions = [0.7,0.3,0.7,0.3,1,1,1,1,1,1,1,1]
+        self.start_state = 0
         self._generate_env_model()
 
         return None
@@ -137,22 +137,8 @@ class Environment_TwoStepAgent:
         Generate transition and reward models
         '''
 
-        self.T = np.zeros((self.num_states, self.num_actions, self.num_states))
-        self.R = np.zeros((self.num_states, self.num_actions), dtype=int)
-
-
-        for s in range(self.num_states):
-            for a in range(self.num_actions):
-
-                s1, r = self._get_new_state(s, a)
-                self.T[s, a, s1] += 1
-                self.R[s, a] = r
-
-        # normalise
-        for s in range(self.num_states):
-            for a in range(self.num_actions):
-                if ~np.all(self.T[s, a, :] == 0):
-                    self.T[s, a, :] /= np.sum(self.T[s, a, :])
+        self.T = self.transitions
+        self.R = self.rewards
 
         return None
 
@@ -164,43 +150,15 @@ class Environment_TwoStepAgent:
             a: action 
         '''
 
-        i, j  = self._convert_state_to_coords(s)
-        s1, r = None, 0
+        # s_as = np.arange(7)[(s * self.num_actions +2*a):(s * self.num_actions + 2*a+ 2)]
 
-        # check boundaries
-        if i == 0: # top end
-            if a == 0: # action up
-                return s, r
-        elif i == self.num_y_states - 1: # bottom end
-            if a == 1: # action down
-                return s, r
-        if j == 0: # left end
-            if a == 2: # move left
-                return s, r
-        elif j == self.num_x_states - 1: # right end
-            if a == 3: # move right
-                return s, r
 
-        if a == 0: # move up
-            ni, nj = i-1, j
-        elif a == 1: # move down
-            ni, nj = i+1, j
-        elif a == 2: # move left
-            ni, nj = i, j-1
-        else: # move right
-            ni, nj = i, j+1
+        # if s == 0:
+        #     s_new = np.random.choice((1,2), p=self.transitions[s_as]) 
 
-        s1 = self._convert_coords_to_state(ni, nj)
 
-        # check blocked states
-        if s1 in self.blocked_states:
-            return s, r
-        
-        # check if goal
-        if s1 == self.goal_state:
-            r = self.reward_at_goal
-
-        return s1, r
+        # return r
+        return None #s_new
     
     def _convert_state_to_coords(self, s):
         '''
