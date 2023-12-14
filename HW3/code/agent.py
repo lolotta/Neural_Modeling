@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import stats # for gaussian noise
-from environment import Environment
+from environment import Environment, Environment_TwoStepAgent
 
 class DynaAgent(Environment):
 
@@ -85,7 +85,7 @@ class DynaAgent(Environment):
             s1 -- next state
         '''
   
-        self.experience_buffer[s+a,:] = np.asarray((s,a,r,s1))
+        self.experience_buffer[s*self.num_actions+a,:] = np.asarray((s,a,r,s1))
         return None
 
     def _update_qvals(self, s, a, r, s1, bonus=False):
@@ -229,7 +229,7 @@ class DynaAgent(Environment):
 
         return None
     
-class TwoStepAgent:
+class TwoStepAgent(Environment_TwoStepAgent):
 
     def __init__(self, alpha1, alpha2, beta1, beta2, lam, w, p):
 
@@ -252,9 +252,44 @@ class TwoStepAgent:
         self.lam    = lam
         self.w      = w
         self.p      = p
-
+        self.last_a = -1
         return None
         
+    def init_env(self, env_config):
+
+        '''
+        Initialise the environment
+        Input arguments:
+            **env_config -- dictionary with environment parameters
+        '''
+        Environment.__init__(self, env_config)
+        return None
+    
+    def _init_q_values(self):
+
+        '''
+        Initialise the Q-value table
+        '''
+
+        self.QTD = np.zeros(self.num_states* self.num_actions+1)
+        self.QMB = np.zeros(self.num_states* self.num_actions+1)
+        self.Qnet = np.zeros(self.num_states* self.num_actions+1)
+
+        return None
+    
+    def _init_experience_buffer(self):
+
+        '''
+        Initialise the experience buffer
+        '''
+
+        self.experience_buffer = np.zeros((self.num_states*self.num_actions, 5), dtype=int)
+        for s in range(self.num_states):
+            for a in range(self.num_actions):
+                self.experience_buffer[s*self.num_actions+a] = [s, a, 0, s, a]
+
+        return None
+
     def _init_history(self):
 
         '''
@@ -265,6 +300,111 @@ class TwoStepAgent:
 
         return None
     
+    def _init_transition_probabilities(self):
+
+        '''
+        Initialise history to later compute stay probabilities
+        '''
+
+        self.transition_p = np.zeros(4)
+
+        return None
+    
+    def _update_experience_buffer(self, s, a, r, s1, a1):
+
+        '''
+        Update the experience buffer (world model)
+        Input arguments:
+            s  -- initial state
+            a  -- chosen action
+            r  -- received reward
+            s1 -- next state
+        '''
+        new_exp = np.asarray((s,a,r,s1,a1))
+        if self.experience_buffer[s*self.num_actions+a].shape[0] == 1:
+            self.experience_buffer[s*self.num_actions+a] == new_exp
+        else:
+            old_exp = self.experience_buffer[s*self.num_actions+a]
+            self.experience_buffer[s*self.num_actions+a] = np.concatenate((old_exp, new_exp))
+  
+        return None
+    
+    def _get_transition_probabilities(self):
+        self.transition_p = np.zeros(4)
+        #p=0: prob(s2|s1,a1) 
+        #p=1: prob(s2|s1,a2) 
+        #p=2: prob(s3|s1,a1)  = 1 -p=0
+        #p=3: prob(s3|s1,a2) = 1 -p=1
+        for s in range(1):
+            for a in range(2):
+                experience = self.experience_buffer[0,a]
+                counter = 0
+                for exp in experience:
+                    if exp[3] == s+1:
+                        counter+=1
+                self.transition_p[s+a] = counter/experience.shape[0]
+                self.transition_p[s+a+2] = 1- self.transition_p[s+a]
+        return None
+
+    def _update_q_td(self, s, a, r, s1, a1):
+
+        '''
+        Update the Q-value table of td
+        Input arguments:
+            s     -- initial state
+            a     -- chosen action
+            r     -- received reward
+            s1    -- next state
+            bonus -- True / False whether to use exploration bonus or not
+        '''
+        delta = r + self.QTD[s1*self.num_actions+a1] - self.QTD[s*self.num_actions+a]
+        self.QTD[s*self.num_actions+a] += self.alpha1*self.lam*delta
+        return None
+    
+    def _update_q_mb(self, s, a, r, s1, a1):
+
+        '''
+        Update the Q-value table of mb
+        Input arguments:
+            s     -- initial state
+            a     -- chosen action
+            r     -- received reward
+            s1    -- next state
+            bonus -- True / False whether to use exploration bonus or not
+        '''
+        s_a = s*self.num_actions+a
+
+        if s == 0:
+            prob1 = self.transition_p[(s1-1)*self.num_actions+a]
+            prob2 = 1-prob1
+            best_q1 = np.max(self.QTD[1*self.num_actions:s1*self.num_actions+self.num_actions])
+            best_q2 = np.max(self.QTD[2*self.num_actions:s1*self.num_actions+self.num_actions])
+            self.QMB[s_a] = prob1*best_q1 +prob2*best_q2
+        else:
+            self.QMB[s_a] = self.QTD[s_a]
+        
+        return None
+    
+    def _update_q_net(self, s, a, r, s1, a1):
+
+        '''
+        Update the Q-value table of combined td and mb
+        Input arguments:
+            s     -- initial state
+            a     -- chosen action
+            r     -- received reward
+            s1    -- next state
+            bonus -- True / False whether to use exploration bonus or not
+        '''
+        s_a = s*self.num_actions+a
+
+        if s == 0:
+            self.Qnet[s_a] = self.w * self.QMB[s_a] + (1-self.w)*self.QTD[s_a]
+        else:
+            self.Qnet[s_a] = self.QTD[s_a]
+
+        return None
+
     def _update_history(self, a, s1, r1):
 
         '''
@@ -278,6 +418,33 @@ class TwoStepAgent:
         self.history = np.vstack((self.history, [a, s1, r1]))
 
         return None
+    
+    def _policy(self, s):
+
+        '''
+        Agent's policy 
+        Input arguments:
+            s -- state
+        Output:
+            a -- index of action to be chosen
+        '''
+        exp_terms = np.zeros(2)
+        if s == 0:
+            beta = self.beta1
+            rep = self.last_a == a
+            self.last_a = a
+        else:
+            beta = self.beta2
+            rep = 0
+        for a in self.num_actions:
+            s_a = s*self.num_actions+a
+
+            exp_terms[a] = np.exp(beta*(self.Qnet[s_a] + self.p * rep))
+
+        policy =  exp_terms/ exp_terms.sum()
+
+        a = np.random.choice(np.arange(2),p=policy)
+        return a
     
     def get_stay_probabilities(self):
 
@@ -330,6 +497,31 @@ class TwoStepAgent:
             num_trials -- number of trials to simulate
         '''
             
-        # complete the code
+
+        self._init_q_values()
+        self._init_experience_buffer()
+        self._init_history()
+        self._init_transition_probabilities
+
+        self.s = self.start_state
+
+        for _ in range(num_trials):
+            self.s = self.start_state
+
+            for stage in range(2):
+                # choose action
+                a  = self._policy(self.s)
+                # get new state
+                new_s = np.random.choice(np.arange(self.num_states), p=list(self.T[self.s, a, :]))
+                # receive reward
+                r  = self.R[self.s, a]
+                # learning
+                self._update_qvals(self.s, a, r, new_s)
+                # update world model 
+                self._update_experience_buffer(self.s, a, r, new_s)
+                # update history
+                self._update_history(self.s, a, r, new_s)
+                
+                s = new_s
 
         return None
