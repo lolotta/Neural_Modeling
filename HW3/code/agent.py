@@ -266,6 +266,7 @@ class TwoStepAgent(Environment_TwoStepAgent):
         Environment_TwoStepAgent.__init__(self, env_config)
         return None
     
+    
     def _init_q_values(self):
 
         '''
@@ -314,7 +315,6 @@ class TwoStepAgent(Environment_TwoStepAgent):
         # input s is 1 or 2
         # input a is 0 or 1
         position = (s-1)*2+a
-        
         p = self.rewards[position]
         r = np.random.choice((0,1), p=(1-p, p))
 
@@ -378,16 +378,27 @@ class TwoStepAgent(Environment_TwoStepAgent):
             r     -- received reward
             s1    -- next state
         '''
+        
+        
         if s == 0:
+            s_a_old = s*self.num_actions+a
+            s_a_new = s1*self.num_actions+a1
+            q_s = self.QTD[s_a_old]
+            q_s1 = self.QTD[s_a_new]
             alpha = self.alpha1
-            delta = r + self.QTD[s1*self.num_actions+a1] - self.QTD[s*self.num_actions+a]
-            self.QTD[s*self.num_actions+a] += alpha*self.lam*delta
-
+            delta = r+q_s1-q_s
+            self.QTD[s_a_old] += alpha*delta*self.lam
+            
         else:
+            s_a_old = s*self.num_actions+a
+            q_s = self.QTD[s_a_old]
+            q_s1 = 0
             alpha = self.alpha2
-            delta = r - self.QTD[s*self.num_actions+a]
+            delta = r+q_s1-q_s
+            self.QTD[s_a_old] += alpha*delta
 
-            self.QTD[s*self.num_actions+a] += alpha*delta
+    
+
         return None
     
     def _update_q_mb(self, s, a):
@@ -483,6 +494,7 @@ class TwoStepAgent(Environment_TwoStepAgent):
         if s == 0:
             prob1 = self.transition_m[0][a]
             p = [prob1, 1-prob1]
+            p=np.round(p,1)
             new_s = np.random.choice([1,2], p=p)
         else:
             new_s = 3
@@ -537,8 +549,7 @@ class TwoStepAgent(Environment_TwoStepAgent):
         Main simulation function
         Input arguments:
             num_trials -- number of trials to simulate
-        '''
-            
+        '''   
 
         self._init_q_values()
         self._init_track_state_transition()
@@ -552,24 +563,29 @@ class TwoStepAgent(Environment_TwoStepAgent):
             a1  = self._policy(s1)
             # get new state
             r1=0
-            new_s = self.get_next_state(s1,a1)
-            self._track_state_transitions(a1,new_s)
+            s2 = self.get_next_state(s1,a1)
+            self._track_state_transitions(a1,s2)
             self.last_a = a1
 
             # receive reward
-            a2 = self._policy(new_s)
-            final_s = self.get_next_state(new_s,a2)
-            r2 = self.get_reward(new_s,a2)
+            a2 = self._policy(s2)
+            self._update_q_td(s1, a1, r1, s2,a2)
+
+            s3 = self.get_next_state(s2,a2)
+            r2 = self.get_reward(s2,a2)
+
             # learning
-            self._update_q_td(s1, a1, r1, new_s,a2)
-            self._update_q_td(new_s, a2, r2, final_s,_)
+            self._update_q_td(s2, a2, r2, s3,_)
+
             self._update_q_mb(s1,a1)
-            self._update_q_mb(new_s,a2)
+
+            self._update_q_mb(s2,a2)
             self._update_q_net(s1,a1)
-            self._update_q_net(new_s,a2)
+
+            self._update_q_net(s2,a2)
             
             # update history
-            self._update_history(a1, new_s, r2)
+            self._update_history(a1, s2, r2)
             self.update_rewards()
             
         return None
