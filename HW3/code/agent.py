@@ -269,7 +269,6 @@ class TwoStepAgent(Environment_TwoStepAgent):
         self.lam    = lam
         self.w      = w
         self.p      = p
-        self.last_a = -1
 
         return None
         
@@ -346,11 +345,11 @@ class TwoStepAgent(Environment_TwoStepAgent):
         for i, reward in enumerate(self.rewards):
             if (reward < self.boundaries[0]):
                 difference = self.boundaries[0] - reward
-                self.rewards[i] += difference
+                self.rewards[i] += 2*difference
 
             elif (reward>self.boundaries[1]):
                 difference = self.boundaries[1] - reward
-                self.rewards[i] += difference
+                self.rewards[i] += 2*difference
 
     def _init_transition_matrix(self):
 
@@ -372,6 +371,9 @@ class TwoStepAgent(Environment_TwoStepAgent):
         '''
         self.transition_1 = 0
         self.transition_2 = 0
+
+        self.last_a = -1
+
 
     def _track_state_transitions(self, a, s1):
         '''
@@ -398,7 +400,6 @@ class TwoStepAgent(Environment_TwoStepAgent):
         
         
         if s == 0:
-            
             if trace:
                 s_a_old = s*self.num_actions+a
                 s_a_new = s1*self.num_actions+a1
@@ -414,13 +415,12 @@ class TwoStepAgent(Environment_TwoStepAgent):
                 alpha = self.alpha1
                 delta = r+q_s1-q_s
                 self.QTD[s_a_old] += alpha*delta
-
         else:
-            s_a_old = s*self.num_actions+a
-            q_s = self.QTD[s_a_old]
+            s_a = s*self.num_actions+a
+            q_s = self.QTD[s_a]
             alpha = self.alpha2
             delta = r-q_s
-            self.QTD[s_a_old] += alpha*delta
+            self.QTD[s_a] += alpha*delta
 
     
 
@@ -595,28 +595,36 @@ class TwoStepAgent(Environment_TwoStepAgent):
 
             # receive reward
             a2 = self._policy(s2)
+            
             self._update_q_td(s1, a1, r1, s2,a2,False)
             
 
             r2 = self.get_reward(s2,a2)
 
             # learning
-            # print(s1,a1,r1,s2,a2,r2)
+            self._update_q_td(s2, a2, r2, _,_,False)
             self._update_q_td(s1, a1, r2, s2,a2,True)
 
-            self._update_q_td(s2, a2, r2, _,_,False)
 
 
-            self._update_q_mb(s2,a2)
+
             self._update_q_mb(s1,a1)
 
 
+            self._update_q_mb(s2,a2)
+
+
+
+
+
             self._update_q_net(s1,a1)
+
+
             self._update_q_net(s2,a2)
 
 
-            
-            # update history
+
+            #update history
             self._update_history(a1, s2, r2)
             self.update_rewards()
             
