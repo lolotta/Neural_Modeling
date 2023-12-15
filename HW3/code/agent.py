@@ -152,10 +152,27 @@ class DynaAgent(Environment):
         #if there is multiple adapted qs with same value, make a random choice 
         # between them. Im using noise to make the values different
         # the noise doesnt change the q values itself 
-        if np.unique(adapted_qs).shape[0] < 4:
-            adapted_qs += np.random.randn(4) * 0.000001
+        
+        if self.epsilon != 1:
+            if np.unique(adapted_qs).shape[0] < 4:
+                adapted_qs += np.random.randn(4) * 0.000001
 
-        a = np.argmax(np.asarray(adapted_qs))
+            a = np.argmax(np.asarray(adapted_qs))
+
+        # epsilon greedy:
+        else:
+            epsi = 0.1
+            if np.random.random() < epsi:
+                a = np.random.randint(0,4)
+            else:
+                if np.unique(qs).shape[0] < 4:
+                    random_noise = np.random.randn(4) * 0.000001
+                    qs += random_noise
+                    a = np.argmax(np.asarray(qs))
+                    qs -= random_noise
+                else:
+                    a = np.argmax(np.asarray(qs))
+
         return a
 
     def _plan(self, num_planning_updates):
@@ -368,7 +385,7 @@ class TwoStepAgent(Environment_TwoStepAgent):
             self.transition_2+=1
 
 
-    def _update_q_td(self, s, a, r, s1, a1):
+    def _update_q_td(self, s, a, r, s1, a1, trace):
 
         '''
         Update the Q-value table of td
@@ -381,20 +398,28 @@ class TwoStepAgent(Environment_TwoStepAgent):
         
         
         if s == 0:
-            s_a_old = s*self.num_actions+a
-            s_a_new = s1*self.num_actions+a1
-            q_s = self.QTD[s_a_old]
-            q_s1 = self.QTD[s_a_new]
-            alpha = self.alpha1
-            delta = r+q_s1-q_s
-            self.QTD[s_a_old] += alpha*delta*self.lam
             
+            if trace:
+                s_a_old = s*self.num_actions+a
+                s_a_new = s1*self.num_actions+a1
+                q_s1 = self.QTD[s_a_new]
+                alpha = self.alpha1
+                delta = r-q_s1
+                self.QTD[s_a_old] += alpha*delta*self.lam
+            else:
+                s_a_old = s*self.num_actions+a
+                s_a_new = s1*self.num_actions+a1
+                q_s = self.QTD[s_a_old]
+                q_s1 = self.QTD[s_a_new]
+                alpha = self.alpha1
+                delta = r+q_s1-q_s
+                self.QTD[s_a_old] += alpha*delta
+
         else:
             s_a_old = s*self.num_actions+a
             q_s = self.QTD[s_a_old]
-            q_s1 = 0
             alpha = self.alpha2
-            delta = r+q_s1-q_s
+            delta = r-q_s
             self.QTD[s_a_old] += alpha*delta
 
     
@@ -423,7 +448,7 @@ class TwoStepAgent(Environment_TwoStepAgent):
             prob1 = self.current_transition_m[a]
             prob2 = 1-prob1
 
-            best_q1 = np.max(self.QTD[2:4])
+            best_q1 = np.max(self.QTD[2:4]) 
             best_q2 = np.max(self.QTD[4:])
             self.QMB[s_a] = prob1*best_q1 +prob2*best_q2
         else:
@@ -483,7 +508,7 @@ class TwoStepAgent(Environment_TwoStepAgent):
                 rep = 0
             s_a = s*self.num_actions+a
 
-            exp_terms[a] = np.exp(beta*(self.QTD[s_a] + self.p * rep)) #qnet
+            exp_terms[a] = np.exp(beta*(self.Qnet[s_a] + self.p * rep)) #qnet
 
         policy =  exp_terms/ exp_terms.sum()
 
@@ -569,20 +594,23 @@ class TwoStepAgent(Environment_TwoStepAgent):
 
             # receive reward
             a2 = self._policy(s2)
-            self._update_q_td(s1, a1, r1, s2,a2)
+            self._update_q_td(s1, a1, r1, s2,a2,False)
+            
 
-            s3 = self.get_next_state(s2,a2)
             r2 = self.get_reward(s2,a2)
 
             # learning
-            self._update_q_td(s2, a2, r2, s3,_)
+            self._update_q_td(s1, a1, r2, s2,a2,True)
+            self._update_q_td(s2, a2, r2, _,_,False)
 
             self._update_q_mb(s1,a1)
 
             self._update_q_mb(s2,a2)
-            self._update_q_net(s1,a1)
 
+            self._update_q_net(s1,a1)
             self._update_q_net(s2,a2)
+
+
             
             # update history
             self._update_history(a1, s2, r2)
