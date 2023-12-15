@@ -295,7 +295,7 @@ class TwoStepAgent(Environment_TwoStepAgent):
         Initialise rewards uniformly and determine boundaries
         '''
 
-        self.rewards = [0.5,0.5,0.5,0.5]
+        self.rewards = np.random.uniform(0.25,0.75,4)#[0.5,0.5,0.5,0.5]
         self.boundaries = [0.25,0.75]
 
 
@@ -483,7 +483,7 @@ class TwoStepAgent(Environment_TwoStepAgent):
                 rep = 0
             s_a = s*self.num_actions+a
 
-            exp_terms[a] = np.exp(beta*(self.Qnet[s_a] + self.p * rep))
+            exp_terms[a] = np.exp(beta*(self.QTD[s_a] + self.p * rep)) #qnet
 
         policy =  exp_terms/ exp_terms.sum()
 
