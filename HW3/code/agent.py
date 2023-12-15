@@ -586,6 +586,7 @@ class TwoStepAgent(Environment_TwoStepAgent):
             s1 = self.start_state
             # choose action
             a1  = self._policy(s1)
+
             # get new state
             r1=0
             s2 = self.get_next_state(s1,a1)
@@ -600,12 +601,15 @@ class TwoStepAgent(Environment_TwoStepAgent):
             r2 = self.get_reward(s2,a2)
 
             # learning
+            # print(s1,a1,r1,s2,a2,r2)
             self._update_q_td(s1, a1, r2, s2,a2,True)
+
             self._update_q_td(s2, a2, r2, _,_,False)
 
-            self._update_q_mb(s1,a1)
 
             self._update_q_mb(s2,a2)
+            self._update_q_mb(s1,a1)
+
 
             self._update_q_net(s1,a1)
             self._update_q_net(s2,a2)
