@@ -114,7 +114,7 @@ class Environment:
     
 class Environment_TwoStepAgent:
     '''
-    Environment class which specifies how the agent moves through a given maze
+    Environment class which specifies the parameters of the two step agent
     '''
 
     def __init__(self, p):

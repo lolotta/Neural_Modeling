@@ -83,7 +83,8 @@ class DynaAgent(Environment):
             r  -- received reward
             s1 -- next state
         '''
-  
+        # puts the newest s,a,r,s1 experience in the experience buffer at the position s,a
+        # and replaces old experience
         self.experience_buffer[s*self.num_actions+a,:] = np.asarray((s,a,r,s1))
         return None
 
@@ -102,7 +103,10 @@ class DynaAgent(Environment):
         next_Q = self.Q[s1,best_a]
 
         # complete the code
-
+        # updates the q value for a given state-action pair
+        # the exploration bonus is only added during planning when bonus = true
+        # and only added for dyna q+ which has epsilon != 0
+        # in dyna q-, epsilon is 0 and therefore the exploration bonus is not added
         self.Q[s,a] = self.Q[s,a] + self.alpha*(r + (self.epsilon*bonus*np.sqrt(self.action_count[s,a])) + self.gamma*next_Q - self.Q[s,a])
 
         return None
@@ -116,7 +120,9 @@ class DynaAgent(Environment):
             s  -- initial state
             a  -- chosen action
         '''
-
+        # keeps track of how many steps ago an action in a state was performed
+        # after every step, all action counts are increased
+        # only the action that was taken is reset to 0
         self.action_count = self.action_count + 1
         self.action_count[s,a] = 0
         return None
@@ -131,7 +137,7 @@ class DynaAgent(Environment):
             r     -- received reward
             s1    -- next state
         '''
-
+        # adds s,a,r,s1 to the history
         self.history = np.vstack((self.history, np.array([s, a, r, s1])))
 
         return None
@@ -147,6 +153,7 @@ class DynaAgent(Environment):
         '''
         qs = self.Q[s,:]
         ns = self.action_count[s,:]
+        #since epsilon is 0 in dyna q-, no exploration bonus is added there
         adapted_qs = qs + self.epsilon*np.sqrt(ns)
 
         #if there is multiple adapted qs with same value, make a random choice 
@@ -159,7 +166,9 @@ class DynaAgent(Environment):
 
             a = np.argmax(np.asarray(adapted_qs))
 
-        # epsilon greedy:
+
+
+        # this is for epsilon greedy agent, not for dyna:
         else:
             epsi = 0.1
             if np.random.random() < epsi:
@@ -184,6 +193,8 @@ class DynaAgent(Environment):
         '''
 
         # complete the code
+        # for the number of planning steps, perform a random action from the
+        # experience buffer again and update the q values with those experiences
         for _ in range(num_planning_updates):
 
             sars_ind = np.random.randint(self.experience_buffer.shape[0])
@@ -286,11 +297,15 @@ class TwoStepAgent(Environment_TwoStepAgent):
     def _init_q_values(self):
 
         '''
-        Initialise the Q-value table
+        Initialise the Q-value tables
+
+        QTD = model free
+        QMB = model based
+        Qnet = combination of the two above
         '''
 
         self.QTD = np.zeros((self.num_states* self.num_actions))
-        self.QMB = np.zeros((self.num_states* self.num_actions))
+        self.QMB = np.zeros((2)) #for the other s-a combinations, QMB is not needed and QTD is used
         self.Qnet = np.zeros((self.num_states* self.num_actions))
         return None
     
@@ -321,11 +336,11 @@ class TwoStepAgent(Environment_TwoStepAgent):
         '''
         returns the reward at a given final state
         since final state is s=3 everywhere, the true
-        final state is calculates as combination of s2 and a2
+        final state is calculated as combination of s2 and a2
         '''
         
         #final_state 0: sB + left
-        #final_state 1: sB + rihgt
+        #final_state 1: sB + right
         #final_state 2: sC + left
         #final_state 3: sC + right
         # input s is 1 or 2
@@ -341,7 +356,10 @@ class TwoStepAgent(Environment_TwoStepAgent):
         changes rewards by a gaussian noise
         and keeps it in boundaries
         '''
+
+        #add gaussian noise to every reward
         self.rewards += np.random.normal(loc=0, scale=0.025, size=4)
+        #check if rewards are outside the boundaries and make the boundary reflective
         for i, reward in enumerate(self.rewards):
             if (reward < self.boundaries[0]):
                 difference = self.boundaries[0] - reward
@@ -359,14 +377,16 @@ class TwoStepAgent(Environment_TwoStepAgent):
 
         '''
 
-        self.transition_m = [[0.7,0.3], [0.3,0.7]] #p from going to sB with action 1 or 2, p from going to sB with action 1 or 2
-        self.current_transition_m = self.transition_m[0] 
+        self.transition_m = [[0.7,0.3], [0.3,0.7]] #[[p from going to sB with action 0, or with 1], [p from going to sB with action 0, or 1]]
+        self.current_transition_m = self.transition_m[0] #set an initial believed transition
 
         return None
     
     def _init_track_state_transition(self):
         '''
-        Initialise counters for evidence of either transition matrix
+        Initialise counters for evidence of either transition matrix and
+        Initialise memory for last action taken at s=0 
+
 
         '''
         self.transition_1 = 0
@@ -396,25 +416,27 @@ class TwoStepAgent(Environment_TwoStepAgent):
             a     -- chosen action
             r     -- received reward
             s1    -- next state
+            a1    -- next action
+            trace -- if eligibility trace is applied
         '''
         
         
         if s == 0:
+            s_a_old = s*self.num_actions+a
+            s_a_new = s1*self.num_actions+a1
+            q_s1 = self.QTD[s_a_new]
+            alpha = self.alpha1
+
             if trace:
-                s_a_old = s*self.num_actions+a
-                s_a_new = s1*self.num_actions+a1
-                q_s1 = self.QTD[s_a_new]
-                alpha = self.alpha1
+                # eligibility trace is applied by using reward of s=3 and multiplying by lambda
                 delta = r-q_s1
                 self.QTD[s_a_old] += alpha*delta*self.lam
             else:
-                s_a_old = s*self.num_actions+a
-                s_a_new = s1*self.num_actions+a1
+                # normal q value update
                 q_s = self.QTD[s_a_old]
-                q_s1 = self.QTD[s_a_new]
-                alpha = self.alpha1
                 delta = r+q_s1-q_s
                 self.QTD[s_a_old] += alpha*delta
+        # else there is no next state
         else:
             s_a = s*self.num_actions+a
             q_s = self.QTD[s_a]
@@ -422,7 +444,6 @@ class TwoStepAgent(Environment_TwoStepAgent):
             delta = r-q_s
             self.QTD[s_a] += alpha*delta
 
-    
 
         return None
     
@@ -435,8 +456,7 @@ class TwoStepAgent(Environment_TwoStepAgent):
             a     -- chosen action
         '''
 
-        # choose current transition matrix
-
+        # choose current transition matrix based on where more transitions happened so far
         if self.transition_1 > self.transition_2:
             self.current_transition_m = self.transition_m[0]
         else:
@@ -444,15 +464,14 @@ class TwoStepAgent(Environment_TwoStepAgent):
 
         s_a = s*self.num_actions+a
 
-        if s == 0:
-            prob1 = self.current_transition_m[a]
-            prob2 = 1-prob1
+        # in s=0 update QMB based on the update rule from the paper
+        prob1 = self.current_transition_m[a]
+        prob2 = 1-prob1
 
-            best_q1 = np.max(self.QTD[2:4]) 
-            best_q2 = np.max(self.QTD[4:])
-            self.QMB[s_a] = prob1*best_q1 +prob2*best_q2
-        else:
-            self.QMB[s_a] = self.QTD[s_a]
+        best_q1 = np.max(self.QTD[2:4]) 
+        best_q2 = np.max(self.QTD[4:])
+        self.QMB[s_a] = prob1*best_q1 +prob2*best_q2
+
         
         return None
     
@@ -467,10 +486,8 @@ class TwoStepAgent(Environment_TwoStepAgent):
         '''
         s_a = s*self.num_actions+a
 
-        if s == 0:
-            self.Qnet[s_a] = self.w * self.QMB[s_a] + (1-self.w)*self.QTD[s_a]
-        else:
-            self.Qnet[s_a] = self.QTD[s_a]
+        # in s=0, Qnet is a weighted sum of QMB and QTD (all at positions s,a) 
+        self.Qnet[s_a] = self.w * self.QMB[s_a] + (1-self.w)*self.QTD[s_a]
 
         return None
 
@@ -498,7 +515,8 @@ class TwoStepAgent(Environment_TwoStepAgent):
             a -- index of action to be chosen
         '''
         exp_terms = np.zeros(2)
-        
+        # rep is 1 if we are in the first stage and the current action is the same
+        # as in the last trial. rep is 0 else
         for a in range(self.num_actions):
             if s == 0:
                 beta = self.beta1
@@ -508,8 +526,9 @@ class TwoStepAgent(Environment_TwoStepAgent):
                 rep = 0
             s_a = s*self.num_actions+a
 
-            exp_terms[a] = np.exp(beta*(self.Qnet[s_a] + self.p * rep)) #qnet
+            exp_terms[a] = np.exp(beta*(self.Qnet[s_a] + self.p * rep)) 
 
+        # softmax 
         policy =  exp_terms/ exp_terms.sum()
 
         a = np.random.choice(np.arange(2),p=policy)
@@ -517,7 +536,9 @@ class TwoStepAgent(Environment_TwoStepAgent):
     
     def get_next_state(self,s,a):
         if s == 0:
+            # first transition matrix is the true one
             prob1 = self.transition_m[0][a]
+            #prob1 is the probability of going to sB with the chosen action
             p = [prob1, 1-prob1]
             p=np.round(p,1)
             new_s = np.random.choice([1,2], p=p)
@@ -575,7 +596,7 @@ class TwoStepAgent(Environment_TwoStepAgent):
         Input arguments:
             num_trials -- number of trials to simulate
         '''   
-
+        # initialise everything
         self._init_q_values()
         self._init_track_state_transition()
         self._init_history()
@@ -583,49 +604,43 @@ class TwoStepAgent(Environment_TwoStepAgent):
         self._init_reward()
 
         for _ in range(num_trials):
+            # start at s=0
             s1 = self.start_state
             # choose action
             a1  = self._policy(s1)
-
-            # get new state
+            # reward 1 is always 0
             r1=0
+            # get new state
             s2 = self.get_next_state(s1,a1)
+
+            # track the transition that occured from stage 1 to stage 2 and memorise the action 
             self._track_state_transitions(a1,s2)
             self.last_a = a1
 
-            # receive reward
+            # choose second action
             a2 = self._policy(s2)
-            
-            self._update_q_td(s1, a1, r1, s2,a2,False)
-            
 
+            # get the probabilistic reward
             r2 = self.get_reward(s2,a2)
 
             # learning
+            # update model free q value
+            self._update_q_td(s1, a1, r1, s2,a2,False)
             self._update_q_td(s2, a2, r2, _,_,False)
+            # update model free q value with eligibility trace
             self._update_q_td(s1, a1, r2, s2,a2,True)
-
-
-
-
+            # update model based q values for BOTH actions
             self._update_q_mb(s1,a1)
-
-
-            self._update_q_mb(s2,a2)
-
-
-
-
-
+            self._update_q_mb(s1,1-a1)
+ 
+            #update all q net values
             self._update_q_net(s1,a1)
-
-
-            self._update_q_net(s2,a2)
-
-
+            self._update_q_net(s1,1-a1)
+            self.Qnet[2:] = self.QTD[2:]
 
             #update history
             self._update_history(a1, s2, r2)
+            # add gaussian noise to rewards
             self.update_rewards()
             
         return None
