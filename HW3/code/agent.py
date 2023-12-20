@@ -107,7 +107,11 @@ class DynaAgent(Environment):
         # the exploration bonus is only added during planning when bonus = true
         # and only added for dyna q+ which has epsilon != 0
         # in dyna q-, epsilon is 0 and therefore the exploration bonus is not added
-        self.Q[s,a] = self.Q[s,a] + self.alpha*(r + (self.epsilon*bonus*np.sqrt(self.action_count[s,a])) + self.gamma*next_Q - self.Q[s,a])
+
+        if self.epsilon != 1:
+            self.Q[s,a] = self.Q[s,a] + self.alpha*(r + (self.epsilon*bonus*np.sqrt(self.action_count[s,a])) + self.gamma*next_Q - self.Q[s,a])
+        else:
+            self.Q[s,a] = self.Q[s,a] + self.alpha*(r + self.gamma*next_Q - self.Q[s,a])
 
         return None
 
