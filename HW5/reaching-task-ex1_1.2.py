@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Subject name
-subject_name = "subject"
+subject_name = "leo"
 # Game parameters
 SCREEN_X, SCREEN_Y = 1920, 1080 # your screen resolution
 WIDTH, HEIGHT = SCREEN_X // 1.25  , SCREEN_Y // 1.25 # be aware of monitor scaling on windows (150%)
