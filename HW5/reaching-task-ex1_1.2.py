@@ -14,7 +14,7 @@ CIRCLE_SIZE = 20
 TARGET_SIZE = CIRCLE_SIZE
 TARGET_RADIUS = 300
 MASK_RADIUS = 0.75 * TARGET_RADIUS
-ATTEMPTS_LIMIT = 25
+ATTEMPTS_LIMIT = 200
 START_POSITION = (WIDTH // 2, HEIGHT // 2)
 START_ANGLE = 0
 PERTUBATION_ANGLE= 30
@@ -114,7 +114,7 @@ while running:
                 pertubation_mode = False
             
     # Design experiment
-    a1, a2, a3, a4, a5, a6 = 0, 5, 14, 15, 20, ATTEMPTS_LIMIT
+    a1, a2, a3, a4, a5, a6 = 0, 40, 80, 120, 160, ATTEMPTS_LIMIT
     if attempts == a1:
         pertubation_mode = False
     elif attempts == a2:
