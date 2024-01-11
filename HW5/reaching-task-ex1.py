@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 # Game parameters
 SCREEN_X, SCREEN_Y = 1920, 1080 # your screen resolution
-WIDTH, HEIGHT = SCREEN_X // 1.5  , SCREEN_Y // 1.5 # be aware of monitor scaling on windows (150%)
+WIDTH, HEIGHT = SCREEN_X // 1.25  , SCREEN_Y // 1.25 # be aware of monitor scaling on windows (150%)
 CIRCLE_SIZE = 20
 TARGET_SIZE = CIRCLE_SIZE
 TARGET_RADIUS = 300
