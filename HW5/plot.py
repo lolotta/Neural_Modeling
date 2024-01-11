@@ -5,9 +5,9 @@ import seaborn as sns
 a1, a2, a3, a4, a5, a6 = 0, 40, 80, 120, 160, 200
 collect_attempts = [a2, a3, a4, a5, a6]
 string_attempts = ['No Perturbation', 'Gradual Perturbation', 'No Perturbation', 'Sudden Perturbation', 'Random Perturbation']
-    
+subject_name = "subject"
 attempts = 200
-data = pd.read_csv("error_angles_lotta.csv")
+data = pd.read_csv("error_angles_"+ subject_name + ".csv")
 
 g0 = sns.scatterplot(data = data, x = 'attempts', y = 'error_angles') 
 g0 = sns.lineplot(data = data, x = 'attempts', y = 'error_angles')
@@ -19,4 +19,4 @@ for i in range(len(collect_attempts)):
 g0.set(xlabel='attempts', ylabel='error_angles', title = 'Error_angles over attempts')
 plt.show()
 
-g0.figure.savefig('error_angles_lotta.png')
+g0.figure.savefig("error_angles_"+ subject_name + "png.")
