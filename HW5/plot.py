@@ -5,7 +5,7 @@ import seaborn as sns
 a1, a2, a3, a4, a5, a6 = 0, 40, 80, 120, 160, 200
 collect_attempts = [a2, a3, a4, a5, a6]
 string_attempts = ['No Perturbation', 'Gradual Perturbation', 'No Perturbation', 'Sudden Perturbation', 'Random Perturbation']
-subject_name = "leo"
+subject_name = "lars"
 attempts = 200
 import os
 print(os.getcwd())
