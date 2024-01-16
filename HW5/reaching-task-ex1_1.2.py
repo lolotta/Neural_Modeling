@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Subject name
-subject_name = "lars"
+subject_name = "Lotta"
 # Game parameters
 SCREEN_X, SCREEN_Y = 1920, 1080 # your screen resolution
 WIDTH, HEIGHT = SCREEN_X // 1.25  , SCREEN_Y // 1.25 # be aware of monitor scaling on windows (150%)
@@ -47,7 +47,7 @@ move_faster = False
 clock = pygame.time.Clock()
 
 # Initialize game modes
-mask_mode= False
+mask_mode= True
 target_mode = 'fix'  # Mode for angular shift of target: random, fix, dynamic
 pertubation_mode= False
 pertubation_type= 'sudden' # Mode for angular shift of controll: random, gradual or sudden
