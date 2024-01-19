@@ -386,12 +386,18 @@ g0 = sns.scatterplot(data = df0, x = 'attempts', y = 'error_angles')
 g0 = sns.lineplot(data = df0, x = 'attempts', y = 'error_angles')
 
 """ Add vertical lines to show the different pertubation_types."""
-g0.vlines(np.array(collect_attempts) - 0.5, ymin = -50, ymax = 50, color = 'blue', alpha = 0.5)
+g0.vlines(np.array(collect_attempts) - 0.5, ymin = -45, ymax = 40, color = 'red', alpha = 0.5)
 """ Add labels to the vertical lines."""
 for i in range(len(collect_attempts)):
-    g0.text(collect_attempts[i] - 7, -50, string_attempts[i], rotation = 90, color = 'blue', alpha = 0.5)
+    g0.text(collect_attempts[i] - 7, -45, string_attempts[i], rotation = 90, color = 'red', alpha = 0.5)
+    """Calculate MV by taking the std of error angles"""
+    relevant_data= df0[(i)*40:(i+1)*40]
+    std = np.round(np.std(relevant_data["error_angles"]),2)
+    g0.text(collect_attempts[i] - 35, 30,"MV = {}".format(std), rotation = 0, color = 'b', alpha = 0.5)
 g0.set(xlabel='attempts', ylabel='error_angles', title = 'Error_angles over attempts')
 plt.show()
+
+g0.figure.savefig("error_angles_"+ subject_name + ".png")
 
 g0_0 = sns.scatterplot(data = df0_0, x = 'attempts', y = 'error_distances')
 y_max = max(error_distances)
